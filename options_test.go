@@ -18,6 +18,7 @@ func testOptions() *Options {
 	o.ClientID = "bazquux"
 	o.ClientSecret = "xyzzyplugh"
 	o.EmailDomains = []string{"*"}
+	o.IssuerURL = "https://accounts.google.com"
 	return o
 }
 
@@ -37,33 +38,8 @@ func TestNewOptions(t *testing.T) {
 	expected := errorMsg([]string{
 		"missing setting: cookie-secret",
 		"missing setting: client-id",
-		"missing setting: client-secret"})
-	assert.Equal(t, expected, err.Error())
-}
-
-func TestGoogleGroupOptions(t *testing.T) {
-	o := testOptions()
-	o.GoogleGroups = []string{"googlegroup"}
-	err := o.Validate()
-	assert.NotEqual(t, nil, err)
-
-	expected := errorMsg([]string{
-		"missing setting: google-admin-email",
-		"missing setting: google-service-account-json"})
-	assert.Equal(t, expected, err.Error())
-}
-
-func TestGoogleGroupInvalidFile(t *testing.T) {
-	o := testOptions()
-	o.GoogleGroups = []string{"test_group"}
-	o.GoogleAdminEmail = "admin@example.com"
-	o.GoogleServiceAccountJSON = "file_doesnt_exist.json"
-	err := o.Validate()
-	assert.NotEqual(t, nil, err)
-
-	expected := errorMsg([]string{
-		"invalid Google credentials file: file_doesnt_exist.json",
-	})
+		"missing setting: client-secret",
+		"hydra provider requires an issuer URL"})
 	assert.Equal(t, expected, err.Error())
 }
 
@@ -146,12 +122,12 @@ func TestDefaultProviderApiSettings(t *testing.T) {
 	o := testOptions()
 	assert.Equal(t, nil, o.Validate())
 	p := o.provider.Data()
-	assert.Equal(t, "https://accounts.google.com/o/oauth2/auth?access_type=offline",
+	assert.Equal(t, "https://accounts.google.com/o/oauth2/v2/auth",
 		p.LoginURL.String())
-	assert.Equal(t, "https://www.googleapis.com/oauth2/v3/token",
+	assert.Equal(t, "https://www.googleapis.com/oauth2/v4/token",
 		p.RedeemURL.String())
 	assert.Equal(t, "", p.ProfileURL.String())
-	assert.Equal(t, "profile email", p.Scope)
+	assert.Equal(t, "openid email profile", p.Scope)
 }
 
 func TestPassAccessTokenRequiresSpecificCookieSecretLengths(t *testing.T) {

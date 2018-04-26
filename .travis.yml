@@ -1,12 +1,20 @@
-language: go
-go:
-  - 1.8.x
-  - 1.9.x
-script:
-  - wget -O dep https://github.com/golang/dep/releases/download/v0.3.2/dep-linux-amd64
-  - chmod +x dep
-  - ./dep ensure
-  - ./test.sh
 sudo: false
-notifications:
-  email: false
+
+language: go
+
+services:
+  - docker
+
+go:
+  - 1.9
+
+env:
+  - DOCKER_IMAGE=pragkent/hydra-hodor:1.0.0
+
+script:
+  - set -e
+  - make test
+  - make docker-bin
+  - docker build -t $DOCKER_IMAGE .
+  - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+  - docker push $DOCKER_IMAGE

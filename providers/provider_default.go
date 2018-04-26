@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/cookie"
+	"github.com/pragkent/hydra-hodor/cookie"
 )
 
 func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err error) {
@@ -24,9 +24,6 @@ func (p *ProviderData) Redeem(redirectURL, code string) (s *SessionState, err er
 	params.Add("client_secret", p.ClientSecret)
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
-	if p.ProtectedResource != nil && p.ProtectedResource.String() != "" {
-		params.Add("resource", p.ProtectedResource.String())
-	}
 
 	var req *http.Request
 	req, err = http.NewRequest("POST", p.RedeemURL.String(), bytes.NewBufferString(params.Encode()))
@@ -111,10 +108,9 @@ func (p *ProviderData) GetUserName(s *SessionState) (string, error) {
 	return "", errors.New("not implemented")
 }
 
-// ValidateGroup validates that the provided email exists in the configured provider
-// email group(s).
-func (p *ProviderData) ValidateGroup(email string) bool {
-	return true
+// IsAllowed checks that the provided token has permission.
+func (p *ProviderData) CheckPermission(token string) (bool, error) {
+	return true, nil
 }
 
 func (p *ProviderData) ValidateSessionState(s *SessionState) bool {

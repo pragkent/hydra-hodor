@@ -1,7 +1,7 @@
-oauth2_proxy
+hydra-hodor
 =================
 
-A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others)
+A reverse proxy and static file server that provides authentication using hydra
 to validate accounts by email, domain or group.
 
 [![Build Status](https://secure.travis-ci.org/bitly/oauth2_proxy.svg?branch=master)](http://travis-ci.org/bitly/oauth2_proxy)
@@ -27,119 +27,16 @@ oauth2_proxy-2.3.linux-amd64: OK
 
 ## OAuth Provider Configuration
 
-You will need to register an OAuth application with a Provider (Google, GitHub or another provider), and configure it with Redirect URI(s) for the domain you intend to run `oauth2_proxy` on.
+You will need to register an OAuth application with a Provider (), and configure it with Redirect URI(s) for the domain you intend to run `hydra-hodor` on.
 
 Valid providers are :
 
-* [Google](#google-auth-provider) *default*
-* [Azure](#azure-auth-provider)
-* [Facebook](#facebook-auth-provider)
-* [GitHub](#github-auth-provider)
-* [GitLab](#gitlab-auth-provider)
-* [LinkedIn](#linkedin-auth-provider)
+* [Hydra]
 
 The provider can be selected using the `provider` configuration value.
 
-### Google Auth Provider
 
-For Google, the registration steps are:
-
-1. Create a new project: https://console.developers.google.com/project
-2. Choose the new project from the top right project dropdown (only if another project is selected)
-3. In the project Dashboard center pane, choose **"API Manager"**
-4. In the left Nav pane, choose **"Credentials"**
-5. In the center pane, choose **"OAuth consent screen"** tab. Fill in **"Product name shown to users"** and hit save.
-6. In the center pane, choose **"Credentials"** tab.
-   * Open the **"New credentials"** drop down
-   * Choose **"OAuth client ID"**
-   * Choose **"Web application"**
-   * Application name is freeform, choose something appropriate
-   * Authorized JavaScript origins is your domain ex: `https://internal.yourcompany.com`
-   * Authorized redirect URIs is the location of oauth2/callback ex: `https://internal.yourcompany.com/oauth2/callback`
-   * Choose **"Create"**
-4. Take note of the **Client ID** and **Client Secret**
-
-It's recommended to refresh sessions on a short interval (1h) with `cookie-refresh` setting which validates that the account is still authorized.
-
-#### Restrict auth to specific Google groups on your domain. (optional)
-
-1. Create a service account: https://developers.google.com/identity/protocols/OAuth2ServiceAccount and make sure to download the json file.
-2. Make note of the Client ID for a future step.
-3. Under "APIs & Auth", choose APIs.
-4. Click on Admin SDK and then Enable API.
-5. Follow the steps on https://developers.google.com/admin-sdk/directory/v1/guides/delegation#delegate_domain-wide_authority_to_your_service_account and give the client id from step 2 the following oauth scopes:
-```
-https://www.googleapis.com/auth/admin.directory.group.readonly
-https://www.googleapis.com/auth/admin.directory.user.readonly
-```
-6. Follow the steps on https://support.google.com/a/answer/60757 to enable Admin API access.
-7. Create or choose an existing administrative email address on the Gmail domain to assign to the ```google-admin-email``` flag. This email will be impersonated by this client to make calls to the Admin SDK. See the note on the link from step 5 for the reason why.
-8. Create or choose an existing email group and set that email to the ```google-group``` flag. You can pass multiple instances of this flag with different groups
-and the user will be checked against all the provided groups.
-9. Lock down the permissions on the json file downloaded from step 1 so only oauth2_proxy is able to read the file and set the path to the file in the ```google-service-account-json``` flag.
-10. Restart oauth2_proxy.
-
-Note: The user is checked against the group members list on initial authentication and every time the token is refreshed ( about once an hour ).
-
-### Azure Auth Provider
-
-1. [Add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/) to your Azure Active Directory tenant.
-2. On the App properties page provide the correct Sign-On URL ie `https://internal.yourcompany.com/oauth2/callback`
-3. If applicable take note of your `TenantID` and provide it via the `--azure-tenant=<YOUR TENANT ID>` commandline option. Default the `common` tenant is used.
-
-The Azure AD auth provider uses `openid` as it default scope. It uses `https://graph.windows.net` as a default protected resource. It call to `https://graph.windows.net/me` to get the email address of the user that logs in.
-
-
-### Facebook Auth Provider
-
-1. Create a new FB App from <https://developers.facebook.com/>
-2. Under FB Login, set your Valid OAuth redirect URIs to `https://internal.yourcompany.com/oauth2/callback`
-
-### GitHub Auth Provider
-
-1. Create a new project: https://github.com/settings/developers
-2. Under `Authorization callback URL` enter the correct url ie `https://internal.yourcompany.com/oauth2/callback`
-
-The GitHub auth provider supports two additional parameters to restrict authentication to Organization or Team level access. Restricting by org and team is normally accompanied with `--email-domain=*`
-
-    -github-org="": restrict logins to members of this organisation
-    -github-team="": restrict logins to members of any of these teams (slug), separated by a comma
-
-If you are using GitHub enterprise, make sure you set the following to the appropriate url:
-
-    -login-url="http(s)://<enterprise github host>/login/oauth/authorize"
-    -redeem-url="http(s)://<enterprise github host>/login/oauth/access_token"
-    -validate-url="http(s)://<enterprise github host>/api/v3"
-
-### GitLab Auth Provider
-
-Whether you are using GitLab.com or self-hosting GitLab, follow [these steps to add an application](http://doc.gitlab.com/ce/integration/oauth_provider.html)
-
-If you are using self-hosted GitLab, make sure you set the following to the appropriate URL:
-
-    -login-url="<your gitlab url>/oauth/authorize"
-    -redeem-url="<your gitlab url>/oauth/token"
-    -validate-url="<your gitlab url>/api/v4/user"
-
-
-### LinkedIn Auth Provider
-
-For LinkedIn, the registration steps are:
-
-1. Create a new project: https://www.linkedin.com/secure/developer
-2. In the OAuth User Agreement section:
-   * In default scope, select r_basicprofile and r_emailaddress.
-   * In "OAuth 2.0 Redirect URLs", enter `https://internal.yourcompany.com/oauth2/callback`
-3. Fill in the remaining required fields and Save.
-4. Take note of the **Consumer Key / API Key** and **Consumer Secret / Secret Key**
-
-### Microsoft Azure AD Provider
-
-For adding an application to the Microsoft Azure AD follow [these steps to add an application](https://azure.microsoft.com/en-us/documentation/articles/active-directory-integrating-applications/).
-
-Take note of your `TenantId` if applicable for your situation. The `TenantId` can be used to override the default `common` authorization server with a tenant specific server.
-
-### OpenID Connect Provider
+### Hydra Provider
 
 OpenID Connect is a spec for OAUTH 2.0 + identity that is implemented by many major providers and several open source projects. This provider was originally built against CoreOS Dex and we will use it as an example.
 
@@ -168,63 +65,6 @@ To generate a strong cookie secret use `python -c 'import os,base64; print base6
 ### Config File
 
 An example [oauth2_proxy.cfg](contrib/oauth2_proxy.cfg.example) config file is in the contrib directory. It can be used by specifying `-config=/etc/oauth2_proxy.cfg`
-
-### Command Line Options
-
-```
-Usage of oauth2_proxy:
-  -approval-prompt string: OAuth approval_prompt (default "force")
-  -authenticated-emails-file string: authenticate against emails via file (one per line)
-  -azure-tenant string: go to a tenant-specific or common (tenant-independent) endpoint. (default "common")
-  -basic-auth-password string: the password to set when passing the HTTP Basic Auth header
-  -client-id string: the OAuth Client ID: ie: "123456.apps.googleusercontent.com"
-  -client-secret string: the OAuth Client Secret
-  -config string: path to config file
-  -cookie-domain string: an optional cookie domain to force cookies to (ie: .yourcompany.com)
-  -cookie-expire duration: expire timeframe for cookie (default 168h0m0s)
-  -cookie-httponly: set HttpOnly cookie flag (default true)
-  -cookie-name string: the name of the cookie that the oauth_proxy creates (default "_oauth2_proxy")
-  -cookie-refresh duration: refresh the cookie after this duration; 0 to disable
-  -cookie-secret string: the seed string for secure cookies (optionally base64 encoded)
-  -cookie-secure: set secure (HTTPS) cookie flag (default true)
-  -custom-templates-dir string: path to custom html templates
-  -display-htpasswd-form: display username / password login form if an htpasswd file is provided (default true)
-  -email-domain value: authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email
-  -footer string: custom footer string. Use "-" to disable default footer.
-  -github-org string: restrict logins to members of this organisation
-  -github-team string: restrict logins to members of any of these teams (slug), separated by a comma
-  -google-admin-email string: the google admin to impersonate for api calls
-  -google-group value: restrict logins to members of this google group (may be given multiple times).
-  -google-service-account-json string: the path to the service account json credentials
-  -htpasswd-file string: additionally authenticate against a htpasswd file. Entries must be created with "htpasswd -s" for SHA encryption
-  -http-address string: [http://]<addr>:<port> or unix://<path> to listen on for HTTP clients (default "127.0.0.1:4180")
-  -https-address string: <addr>:<port> to listen on for HTTPS clients (default ":443")
-  -login-url string: Authentication endpoint
-  -pass-access-token: pass OAuth access_token to upstream via X-Forwarded-Access-Token header
-  -pass-basic-auth: pass HTTP Basic Auth, X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
-  -pass-host-header: pass the request Host Header to upstream (default true)
-  -pass-user-headers: pass X-Forwarded-User and X-Forwarded-Email information to upstream (default true)
-  -profile-url string: Profile access endpoint
-  -provider string: OAuth provider (default "google")
-  -proxy-prefix string: the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in) (default "/oauth2")
-  -redeem-url string: Token redemption endpoint
-  -redirect-url string: the OAuth Redirect URL. ie: "https://internalapp.yourcompany.com/oauth2/callback"
-  -request-logging: Log requests to stdout (default true)
-  -request-logging-format: Template for request log lines (see "Logging Format" paragraph below)
-  -resource string: The resource that is protected (Azure AD only)
-  -scope string: OAuth scope specification
-  -set-xauthrequest: set X-Auth-Request-User and X-Auth-Request-Email response headers (useful in Nginx auth_request mode)
-  -signature-key string: GAP-Signature request signature key (algorithm:secretkey)
-  -skip-auth-preflight: will skip authentication for OPTIONS requests
-  -skip-auth-regex value: bypass authentication for requests path's that match (may be given multiple times)
-  -skip-provider-button: will skip sign-in-page to directly reach the next step: oauth/start
-  -ssl-insecure-skip-verify: skip validation of certificates presented when using HTTPS
-  -tls-cert string: path to certificate file
-  -tls-key string: path to private key file
-  -upstream value: the http url(s) of the upstream endpoint or file:// paths for static files. Routing is based on the path
-  -validate-url string: Access token validation endpoint
-  -version: print version string
-```
 
 See below for provider specific options
 

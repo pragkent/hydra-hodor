@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitly/oauth2_proxy/providers"
 	"github.com/mbland/hmacauth"
+	"github.com/pragkent/hydra-hodor/providers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,6 +82,7 @@ func TestRobotsTxt(t *testing.T) {
 	opts.ClientID = "bazquux"
 	opts.ClientSecret = "foobar"
 	opts.CookieSecret = "xyzzyplugh"
+	opts.IssuerURL = "https://accounts.google.com"
 	opts.Validate()
 
 	proxy := NewOAuthProxy(opts, func(string) bool { return true })
@@ -538,7 +539,7 @@ func TestProcessCookieNoCookieError(t *testing.T) {
 	pc_test := NewProcessCookieTestWithDefaults()
 
 	session, _, err := pc_test.LoadCookiedSession()
-	assert.Equal(t, "Cookie \"_oauth2_proxy\" not present", err.Error())
+	assert.Equal(t, "Cookie \"_hydra_hodor\" not present", err.Error())
 	if session != nil {
 		t.Errorf("expected nil session. got %#v", session)
 	}
@@ -736,6 +737,7 @@ func NewSignatureTest() *SignatureTest {
 	opts.ClientID = "client ID"
 	opts.ClientSecret = "client secret"
 	opts.EmailDomains = []string{"acm.org"}
+	opts.IssuerURL = "https://accounts.google.com"
 
 	authenticator := &SignatureAuthenticator{}
 	upstream := httptest.NewServer(

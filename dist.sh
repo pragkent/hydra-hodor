@@ -9,7 +9,7 @@ dep ensure || exit 1
 
 os=$(go env GOOS)
 arch=$(go env GOARCH)
-version=$(cat $DIR/version.go | grep "const VERSION" | awk '{print $NF}' | sed 's/"//g')
+version=$(cat $DIR/version.go | grep "const Version" | awk '{print $NF}' | sed 's/"//g')
 goversion=$(go version | awk '{print $3}')
 sha256sum=()
 
@@ -22,9 +22,9 @@ for os in windows linux darwin; do
     if [ $os = windows ]; then
         EXT=".exe"
     fi
-    BUILD=$(mktemp -d ${TMPDIR:-/tmp}/oauth2_proxy.XXXXXX)
-    TARGET="oauth2_proxy-$version.$os-$arch.$goversion"
-    FILENAME="oauth2_proxy-$version.$os-$arch$EXT"
+    BUILD=$(mktemp -d ${TMPDIR:-/tmp}/hydra-hodor.XXXXXX)
+    TARGET="hydra-hodor-$version.$os-$arch.$goversion"
+    FILENAME="hydra-hodor-$version.$os-$arch$EXT"
     GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
         go build -ldflags="-s -w" -o $BUILD/$TARGET/$FILENAME || exit 1
     pushd $BUILD/$TARGET

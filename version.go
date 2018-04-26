@@ -1,3 +1,5 @@
 package main
 
-const VERSION = "2.2.1-alpha"
+const Version = "1.0.0"
+
+var GitCommit string

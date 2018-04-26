@@ -1,7 +1,6 @@
 package main
 
 import (
-	b64 "encoding/base64"
 	"errors"
 	"fmt"
 	"html/template"
@@ -14,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitly/oauth2_proxy/cookie"
-	"github.com/bitly/oauth2_proxy/providers"
 	"github.com/mbland/hmacauth"
+	"github.com/pragkent/hydra-hodor/cookie"
+	"github.com/pragkent/hydra-hodor/providers"
 )
 
 const SignatureHeader = "GAP-Signature"
@@ -53,25 +52,23 @@ type OAuthProxy struct {
 	OAuthCallbackPath string
 	AuthOnlyPath      string
 
-	redirectURL         *url.URL // the url to receive requests at
-	provider            providers.Provider
-	ProxyPrefix         string
-	SignInMessage       string
-	HtpasswdFile        *HtpasswdFile
-	DisplayHtpasswdForm bool
-	serveMux            http.Handler
-	SetXAuthRequest     bool
-	PassBasicAuth       bool
-	SkipProviderButton  bool
-	PassUserHeaders     bool
-	BasicAuthPassword   string
-	PassAccessToken     bool
-	CookieCipher        *cookie.Cipher
-	skipAuthRegex       []string
-	skipAuthPreflight   bool
-	compiledRegex       []*regexp.Regexp
-	templates           *template.Template
-	Footer              string
+	redirectURL        *url.URL // the url to receive requests at
+	provider           providers.Provider
+	ProxyPrefix        string
+	SignInMessage      string
+	serveMux           http.Handler
+	SetXAuthRequest    bool
+	PassBasicAuth      bool
+	SkipProviderButton bool
+	PassUserHeaders    bool
+	BasicAuthPassword  string
+	PassAccessToken    bool
+	CookieCipher       *cookie.Cipher
+	skipAuthRegex      []string
+	skipAuthPreflight  bool
+	compiledRegex      []*regexp.Regexp
+	templates          *template.Template
+	Footer             string
 }
 
 type UpstreamProxy struct {
@@ -225,10 +222,6 @@ func (p *OAuthProxy) GetRedirectURI(host string) string {
 	}
 	u.Host = host
 	return u.String()
-}
-
-func (p *OAuthProxy) displayCustomLoginForm() bool {
-	return p.HtpasswdFile != nil && p.DisplayHtpasswdForm
 }
 
 func (p *OAuthProxy) redeemCode(host, code string) (s *providers.SessionState, err error) {
@@ -385,7 +378,6 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	t := struct {
 		ProviderName  string
 		SignInMessage string
-		CustomLogin   bool
 		Redirect      string
 		Version       string
 		ProxyPrefix   string
@@ -393,30 +385,12 @@ func (p *OAuthProxy) SignInPage(rw http.ResponseWriter, req *http.Request, code 
 	}{
 		ProviderName:  p.provider.Data().ProviderName,
 		SignInMessage: p.SignInMessage,
-		CustomLogin:   p.displayCustomLoginForm(),
 		Redirect:      redirect_url,
-		Version:       VERSION,
+		Version:       Version,
 		ProxyPrefix:   p.ProxyPrefix,
 		Footer:        template.HTML(p.Footer),
 	}
 	p.templates.ExecuteTemplate(rw, "sign_in.html", t)
-}
-
-func (p *OAuthProxy) ManualSignIn(rw http.ResponseWriter, req *http.Request) (string, bool) {
-	if req.Method != "POST" || p.HtpasswdFile == nil {
-		return "", false
-	}
-	user := req.FormValue("username")
-	passwd := req.FormValue("password")
-	if user == "" {
-		return "", false
-	}
-	// check auth
-	if p.HtpasswdFile.Validate(user, passwd) {
-		log.Printf("authenticated %q via HtpasswdFile", user)
-		return user, true
-	}
-	return "", false
 }
 
 func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error) {
@@ -480,23 +454,10 @@ func (p *OAuthProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 }
 
 func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
-	redirect, err := p.GetRedirect(req)
-	if err != nil {
-		p.ErrorPage(rw, 500, "Internal Error", err.Error())
-		return
-	}
-
-	user, ok := p.ManualSignIn(rw, req)
-	if ok {
-		session := &providers.SessionState{User: user}
-		p.SaveSession(rw, req, session)
-		http.Redirect(rw, req, redirect, 302)
+	if p.SkipProviderButton {
+		p.OAuthStart(rw, req)
 	} else {
-		if p.SkipProviderButton {
-			p.OAuthStart(rw, req)
-		} else {
-			p.SignInPage(rw, req, http.StatusOK)
-		}
+		p.SignInPage(rw, req, http.StatusOK)
 	}
 }
 
@@ -567,19 +528,32 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// set cookie, or deny
-	if p.Validator(session.Email) && p.provider.ValidateGroup(session.Email) {
-		log.Printf("%s authentication complete %s", remoteAddr, session)
-		err := p.SaveSession(rw, req, session)
-		if err != nil {
-			log.Printf("%s %s", remoteAddr, err)
-			p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
-			return
-		}
-		http.Redirect(rw, req, redirect, 302)
-	} else {
+	if !p.Validator(session.Email) {
 		log.Printf("%s Permission Denied: %q is unauthorized", remoteAddr, session.Email)
 		p.ErrorPage(rw, 403, "Permission Denied", "Invalid Account")
+		return
 	}
+
+	ok, err := p.provider.CheckPermission(session.AccessToken)
+	if err != nil {
+		log.Printf("%s %s", remoteAddr, err)
+		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+		return
+	}
+
+	if !ok {
+		log.Printf("%s Permission Denied: %q is not allowed to access", remoteAddr, session.Email)
+		p.ErrorPage(rw, 403, "Permission Denied", "Permission denied")
+		return
+	}
+
+	log.Printf("%s authentication complete %s", remoteAddr, session)
+	if err := p.SaveSession(rw, req, session); err != nil {
+		log.Printf("%s %s", remoteAddr, err)
+		p.ErrorPage(rw, 500, "Internal Error", "Internal Error")
+		return
+	}
+	http.Redirect(rw, req, redirect, 302)
 }
 
 func (p *OAuthProxy) AuthenticateOnly(rw http.ResponseWriter, req *http.Request) {
@@ -665,13 +639,6 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 	}
 
 	if session == nil {
-		session, err = p.CheckBasicAuth(req)
-		if err != nil {
-			log.Printf("%s %s", remoteAddr, err)
-		}
-	}
-
-	if session == nil {
 		return http.StatusForbidden
 	}
 
@@ -704,31 +671,4 @@ func (p *OAuthProxy) Authenticate(rw http.ResponseWriter, req *http.Request) int
 		rw.Header().Set("GAP-Auth", session.Email)
 	}
 	return http.StatusAccepted
-}
-
-func (p *OAuthProxy) CheckBasicAuth(req *http.Request) (*providers.SessionState, error) {
-	if p.HtpasswdFile == nil {
-		return nil, nil
-	}
-	auth := req.Header.Get("Authorization")
-	if auth == "" {
-		return nil, nil
-	}
-	s := strings.SplitN(auth, " ", 2)
-	if len(s) != 2 || s[0] != "Basic" {
-		return nil, fmt.Errorf("invalid Authorization header %s", req.Header.Get("Authorization"))
-	}
-	b, err := b64.StdEncoding.DecodeString(s[1])
-	if err != nil {
-		return nil, err
-	}
-	pair := strings.SplitN(string(b), ":", 2)
-	if len(pair) != 2 {
-		return nil, fmt.Errorf("invalid format %s", b)
-	}
-	if p.HtpasswdFile.Validate(pair[0], pair[1]) {
-		log.Printf("authenticated %q via basic auth", pair[0])
-		return &providers.SessionState{User: pair[0]}, nil
-	}
-	return nil, fmt.Errorf("%s not in HtpasswdFile", pair[0])
 }

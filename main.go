@@ -15,12 +15,11 @@ import (
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	flagSet := flag.NewFlagSet("oauth2_proxy", flag.ExitOnError)
+	flagSet := flag.NewFlagSet("hydra_hodor", flag.ExitOnError)
 
 	emailDomains := StringArray{}
 	upstreams := StringArray{}
 	skipAuthRegex := StringArray{}
-	googleGroups := StringArray{}
 
 	config := flagSet.String("config", "", "path to config file")
 	showVersion := flagSet.Bool("version", false, "print version string")
@@ -43,38 +42,30 @@ func main() {
 	flagSet.Bool("ssl-insecure-skip-verify", false, "skip validation of certificates presented when using HTTPS")
 
 	flagSet.Var(&emailDomains, "email-domain", "authenticate emails with the specified domain (may be given multiple times). Use * to authenticate any email")
-	flagSet.String("azure-tenant", "common", "go to a tenant-specific or common (tenant-independent) endpoint.")
-	flagSet.String("github-org", "", "restrict logins to members of this organisation")
-	flagSet.String("github-team", "", "restrict logins to members of this team")
-	flagSet.Var(&googleGroups, "google-group", "restrict logins to members of this google group (may be given multiple times).")
-	flagSet.String("google-admin-email", "", "the google admin to impersonate for api calls")
-	flagSet.String("google-service-account-json", "", "the path to the service account json credentials")
 	flagSet.String("client-id", "", "the OAuth Client ID: ie: \"123456.apps.googleusercontent.com\"")
 	flagSet.String("client-secret", "", "the OAuth Client Secret")
 	flagSet.String("authenticated-emails-file", "", "authenticate against emails via file (one per line)")
-	flagSet.String("htpasswd-file", "", "additionally authenticate against a htpasswd file. Entries must be created with \"htpasswd -s\" for SHA encryption or \"htpasswd -B\" for bcrypt encryption")
-	flagSet.Bool("display-htpasswd-form", true, "display username / password login form if an htpasswd file is provided")
 	flagSet.String("custom-templates-dir", "", "path to custom html templates")
 	flagSet.String("footer", "", "custom footer string. Use \"-\" to disable default footer.")
 	flagSet.String("proxy-prefix", "/oauth2", "the url root path that this proxy should be nested under (e.g. /<oauth2>/sign_in)")
 
-	flagSet.String("cookie-name", "_oauth2_proxy", "the name of the cookie that the oauth_proxy creates")
+	flagSet.String("cookie-name", "_hydra_hodor", "the name of the cookie that the oauth_proxy creates")
 	flagSet.String("cookie-secret", "", "the seed string for secure cookies (optionally base64 encoded)")
 	flagSet.String("cookie-domain", "", "an optional cookie domain to force cookies to (ie: .yourcompany.com)*")
-	flagSet.Duration("cookie-expire", time.Duration(168)*time.Hour, "expire timeframe for cookie")
-	flagSet.Duration("cookie-refresh", time.Duration(0), "refresh the cookie after this duration; 0 to disable")
+	flagSet.Duration("cookie-expire", 24*time.Hour, "expire timeframe for cookie")
+	flagSet.Duration("cookie-refresh", 0, "refresh the cookie after this duration; 0 to disable")
 	flagSet.Bool("cookie-secure", true, "set secure (HTTPS) cookie flag")
 	flagSet.Bool("cookie-httponly", true, "set HttpOnly cookie flag")
 
 	flagSet.Bool("request-logging", true, "Log requests to stdout")
 	flagSet.String("request-logging-format", defaultRequestLoggingFormat, "Template for log lines")
 
-	flagSet.String("provider", "google", "OAuth provider")
-	flagSet.String("oidc-issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
+	flagSet.String("provider", "hydra", "OAuth provider")
+	flagSet.String("issuer-url", "", "OpenID Connect issuer URL (ie: https://accounts.google.com)")
 	flagSet.String("login-url", "", "Authentication endpoint")
 	flagSet.String("redeem-url", "", "Token redemption endpoint")
 	flagSet.String("profile-url", "", "Profile access endpoint")
-	flagSet.String("resource", "", "The resource that is protected (Azure AD only)")
+	flagSet.String("resource", "", "The resource that is protected")
 	flagSet.String("validate-url", "", "Access token validation endpoint")
 	flagSet.String("scope", "", "OAuth scope specification")
 	flagSet.String("approval-prompt", "force", "OAuth approval_prompt")
@@ -84,7 +75,7 @@ func main() {
 	flagSet.Parse(os.Args[1:])
 
 	if *showVersion {
-		fmt.Printf("oauth2_proxy v%s (built with %s)\n", VERSION, runtime.Version())
+		fmt.Printf("hydra-hodor v%s %s (built with %s)\n", Version, GitCommit, runtime.Version())
 		return
 	}
 
@@ -113,15 +104,6 @@ func main() {
 			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using one of the following domains: %v", strings.Join(opts.EmailDomains, ", "))
 		} else if opts.EmailDomains[0] != "*" {
 			oauthproxy.SignInMessage = fmt.Sprintf("Authenticate using %v", opts.EmailDomains[0])
-		}
-	}
-
-	if opts.HtpasswdFile != "" {
-		log.Printf("using htpasswd file %s", opts.HtpasswdFile)
-		oauthproxy.HtpasswdFile, err = NewHtpasswdFromFile(opts.HtpasswdFile)
-		oauthproxy.DisplayHtpasswdForm = opts.DisplayHtpasswdForm
-		if err != nil {
-			log.Fatalf("FATAL: unable to open %s %s", opts.HtpasswdFile, err)
 		}
 	}
 

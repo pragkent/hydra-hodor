@@ -119,16 +119,6 @@ func getTemplates() *template.Template {
 	</form>
 	</div>
 
-	{{ if .CustomLogin }}
-	<div class="signin">
-	<form method="POST" action="{{.ProxyPrefix}}/sign_in">
-		<input type="hidden" name="rd" value="{{.Redirect}}">
-		<label for="username">Username:</label><input type="text" name="username" id="username" size="10"><br/>
-		<label for="password">Password:</label><input type="password" name="password" id="password" size="10"><br/>
-		<button type="submit" class="btn">Sign In</button>
-	</form>
-	</div>
-	{{ end }}
 	<script>
 		if (window.location.hash) {
 			(function() {
@@ -142,7 +132,7 @@ func getTemplates() *template.Template {
 	<footer>
 	{{ if eq .Footer "-" }}
 	{{ else if eq .Footer ""}}
-	Secured with <a href="https://github.com/bitly/oauth2_proxy#oauth2_proxy">OAuth2 Proxy</a> version {{.Version}}
+	Secured with <a href="https://github.com/pragkent/hydra-hodor">hydra-hodor</a> version {{.Version}}
 	{{ else }}
 	{{.Footer}}
 	{{ end }}
